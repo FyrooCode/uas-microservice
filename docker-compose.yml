@@ -1,0 +1,96 @@
+networks:
+  microservices-network:
+    driver: bridge
+
+services:
+  # MySQL Database for Product Service
+  mysql-product:
+    image: mysql:8.0
+    container_name: mysql-product
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: product_db
+      MYSQL_USER: product_user
+      MYSQL_PASSWORD: product_password
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_product_data:/var/lib/mysql
+      - ./product-service/sql:/docker-entrypoint-initdb.d
+    networks:
+      - microservices-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 20s
+      retries: 10
+  # MySQL Database for Delivery Service
+  mysql-delivery:
+    image: mysql:8.0
+    container_name: mysql-delivery
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: delivery_db
+      MYSQL_USER: delivery_user
+      MYSQL_PASSWORD: delivery_password
+    ports:
+      - "3308:3306"
+    volumes:
+      - mysql_delivery_data:/var/lib/mysql
+      - ./delivery-service/sql:/docker-entrypoint-initdb.d
+    networks:
+      - microservices-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 20s
+      retries: 10
+
+  # Product Service
+  product-service:
+    build:
+      context: ./product-service
+      dockerfile: Dockerfile
+    container_name: product-service
+    environment:
+      NODE_ENV: production
+      DB_HOST: mysql-product
+      DB_PORT: 3306
+      DB_NAME: product_db
+      DB_USER: product_user
+      DB_PASSWORD: product_password
+      CATEGORY_SERVICE_URL: http://category-service:4002/graphql
+      PORT: 4001
+    ports:
+      - "4001:4001"
+    depends_on:
+      mysql-product:
+        condition: service_healthy
+    networks:
+      - microservices-network
+    restart: unless-stopped
+
+  # Delivery Service
+  delivery-service:
+    build:
+      context: ./delivery-service
+      dockerfile: Dockerfile
+    container_name: delivery-service
+    environment:
+      NODE_ENV: production
+      DB_HOST: mysql-delivery
+      DB_PORT: 3306
+      DB_NAME: delivery_db
+      DB_USER: delivery_user
+      DB_PASSWORD: delivery_password
+      PORT: 4003
+    ports:
+      - "4003:4003"
+    depends_on:
+      mysql-delivery:
+        condition: service_healthy
+    networks:
+      - microservices-network
+    restart: unless-stopped
+
+volumes:
+  mysql_product_data:
+  mysql_delivery_data:

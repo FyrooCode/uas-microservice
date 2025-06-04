@@ -1,0 +1,150 @@
+enum DeliveryStatus {
+  pending
+  confirmed
+  packed
+  shipped
+  in_transit
+  out_for_delivery
+  delivered
+  failed
+  returned
+}
+
+type OrderItem {
+  productId: ID!
+  productName: String!
+  quantity: Int!
+  price: Float!
+}
+
+type Delivery {
+  id: ID!
+  orderId: ID!
+  status: DeliveryStatus!
+  deliveryAddress: String!
+  customerName: String
+  customerPhone: String
+  trackingNumber: String
+  estimatedDelivery: String
+  actualDelivery: String
+  notes: String
+  orderItems: [OrderItem!]
+  isCompleted: Boolean!
+  isInProgress: Boolean!
+  createdAt: String!
+  updatedAt: String!
+}
+
+input OrderItemInput {
+  productId: ID!
+  productName: String!
+  quantity: Int!
+  price: Float!
+}
+
+input CreateDeliveryInput {
+  orderId: ID!
+  deliveryAddress: String!
+  customerName: String
+  customerPhone: String
+  orderItems: [OrderItemInput!]!
+  estimatedDelivery: String
+}
+
+input UpdateDeliveryStatusInput {
+  id: ID!
+  status: DeliveryStatus!
+  trackingNumber: String
+  estimatedDelivery: String
+  actualDelivery: String
+  notes: String
+}
+
+input DeliveryFilterInput {
+  status: DeliveryStatus
+  customerName: String
+  dateFrom: String
+  dateTo: String
+}
+
+input PaginationInput {
+  page: Int = 1
+  limit: Int = 10
+}
+
+type PaginationInfo {
+  currentPage: Int!
+  totalPages: Int!
+  totalItems: Int!
+  hasNextPage: Boolean!
+  hasPreviousPage: Boolean!
+}
+
+# Enhanced error handling for stock validation
+type StockError {
+  productId: ID!
+  productName: String
+  requestedQuantity: Int!
+  availableStock: Int
+  message: String!
+}
+
+type DeliveryCreationResult {
+  delivery: Delivery
+  stockErrors: [StockError!]
+  success: Boolean!
+  message: String!
+}
+
+type DeliveryConnection {
+  deliveries: [Delivery!]!
+  pagination: PaginationInfo!
+}
+
+type DeliveryStats {
+  totalDeliveries: Int!
+  pendingDeliveries: Int!
+  inProgressDeliveries: Int!
+  completedDeliveries: Int!
+  failedDeliveries: Int!
+}
+
+type Query {
+  # Get single delivery by ID
+  delivery(id: ID!): Delivery
+  
+  # Get delivery by order ID (for Order Service integration)
+  deliveryByOrderId(orderId: ID!): Delivery
+  
+  # Get delivery by tracking number
+  deliveryByTrackingNumber(trackingNumber: String!): Delivery
+  
+  # Get deliveries with filtering and pagination
+  deliveries(
+    filter: DeliveryFilterInput
+    pagination: PaginationInput
+  ): DeliveryConnection!
+  
+  # Get delivery statistics
+  deliveryStats: DeliveryStats!
+  
+  # Get all delivery statuses (for frontend dropdown)
+  deliveryStatuses: [String!]!
+}
+
+type Mutation {
+  # Create new delivery with automatic stock reduction (called by Order Service)
+  createDelivery(input: CreateDeliveryInput!): DeliveryCreationResult!
+  
+  # Update delivery status (for admin and internal use)
+  updateDeliveryStatus(input: UpdateDeliveryStatusInput!): Delivery!
+  
+  # Cancel delivery
+  cancelDelivery(id: ID!, reason: String): Delivery!
+  
+  # Generate tracking number for delivery
+  generateTrackingNumber(id: ID!): Delivery!
+  
+  # Mark delivery as delivered
+  markAsDelivered(id: ID!, notes: String): Delivery!
+}

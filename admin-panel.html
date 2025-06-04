@@ -1,0 +1,797 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UAS IAE - Microservices Admin Panel</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            color: #333;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .services {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+
+        .service-card {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 25px;
+            border: 2px solid #e9ecef;
+            transition: all 0.3s ease;
+        }
+
+        .service-card:hover {
+            border-color: #667eea;
+            transform: translateY(-5px);
+        }
+
+        .service-card h3 {
+            color: #495057;
+            margin-bottom: 15px;
+            font-size: 1.3rem;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            color: #495057;
+            font-weight: 500;
+        }
+
+        .form-group input, .form-group select, .form-group textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ced4da;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        .btn {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-right: 10px;
+            margin-bottom: 10px;
+            transition: all 0.3s ease;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        .btn-secondary {
+            background: linear-gradient(45deg, #6c757d, #495057);
+        }
+
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 6px;
+            background: #f8f9fa;
+            border-left: 4px solid #667eea;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .result pre {
+            margin: 0;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+
+        .status-online { background-color: #28a745; }
+        .status-offline { background-color: #dc3545; }
+
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        .health-check {
+            background: #e3f2fd;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+
+        .health-status {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🏗️ UAS IAE Microservices</h1>
+            <p>Enterprise Application Integration - Admin Panel</p>
+        </div>
+
+        <!-- Health Check Section -->
+        <div class="health-check">
+            <h3>📊 Service Health Status</h3>
+            <div class="health-status">
+                <span class="status-indicator status-offline" id="product-status"></span>
+                <span>Product Service (Port 4001)</span>
+                <button class="btn btn-secondary" onclick="checkHealth('product')">Check</button>
+            </div>
+            <div class="health-status">
+                <span class="status-indicator status-offline" id="delivery-status"></span>
+                <span>Delivery Service (Port 4003)</span>
+                <button class="btn btn-secondary" onclick="checkHealth('delivery')">Check</button>
+            </div>
+        </div>
+
+        <div class="services">
+            <!-- Product Service -->
+            <div class="service-card">
+                <h3>🛍️ Product Service</h3>
+                
+                <div class="form-group">
+                    <label>Action:</label>
+                    <select id="product-action">
+                        <option value="getProducts">Get All Products</option>
+                        <option value="getProduct">Get Product by ID</option>
+                        <option value="createProduct">Create Product</option>
+                        <option value="updateProduct">Update Product</option>
+                        <option value="updateStock">Update Stock</option>
+                    </select>
+                </div>
+
+                <div id="product-inputs">
+                    <!-- Dynamic inputs will be generated here -->
+                </div>
+
+                <button class="btn" onclick="executeProductAction()">Execute</button>
+                <button class="btn btn-secondary" onclick="clearResult('product-result')">Clear</button>
+
+                <div id="product-result" class="result" style="display: none;">
+                    <pre id="product-output"></pre>
+                </div>
+            </div>
+
+            <!-- Delivery Service -->
+            <div class="service-card">
+                <h3>🚚 Delivery Service</h3>
+                
+                <div class="form-group">
+                    <label>Action:</label>
+                    <select id="delivery-action">
+                        <option value="getDeliveries">Get All Deliveries</option>
+                        <option value="getDeliveryByOrderId">Get by Order ID</option>
+                        <option value="getDeliveryByTracking">Get by Tracking Number</option>
+                        <option value="createDelivery">Create Delivery</option>
+                        <option value="updateStatus">Update Status</option>
+                        <option value="getStats">Get Statistics</option>
+                    </select>
+                </div>
+
+                <div id="delivery-inputs">
+                    <!-- Dynamic inputs will be generated here -->
+                </div>
+
+                <button class="btn" onclick="executeDeliveryAction()">Execute</button>
+                <button class="btn btn-secondary" onclick="clearResult('delivery-result')">Clear</button>
+
+                <div id="delivery-result" class="result" style="display: none;">
+                    <pre id="delivery-output"></pre>
+                </div>
+            </div>
+        </div>
+
+        <!-- Integration Testing -->
+        <div class="service-card">
+            <h3>🔗 Integration Testing</h3>
+            <p>Test inter-service communication and end-to-end workflows</p>
+            
+            <button class="btn" onclick="testFullWorkflow()">Test Complete Order → Delivery Flow</button>
+            <button class="btn btn-secondary" onclick="testCategoryIntegration()">Test Category Service Integration</button>
+            
+            <div id="integration-result" class="result" style="display: none;">
+                <pre id="integration-output"></pre>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Configuration
+        const PRODUCT_SERVICE_URL = 'http://localhost:4001/graphql';
+        const DELIVERY_SERVICE_URL = 'http://localhost:4003/graphql';
+
+        // Health Check Functions
+        async function checkHealth(service) {
+            const url = service === 'product' ? 'http://localhost:4001/health' : 'http://localhost:4003/health';
+            const statusElement = document.getElementById(`${service}-status`);
+            
+            try {
+                const response = await fetch(url);
+                if (response.ok) {
+                    statusElement.className = 'status-indicator status-online';
+                } else {
+                    statusElement.className = 'status-indicator status-offline';
+                }
+            } catch (error) {
+                statusElement.className = 'status-indicator status-offline';
+            }
+        }
+
+        // Initialize health checks
+        window.onload = function() {
+            checkHealth('product');
+            checkHealth('delivery');
+            updateProductInputs();
+            updateDeliveryInputs();
+        };
+
+        // Dynamic input generation
+        function updateProductInputs() {
+            const action = document.getElementById('product-action').value;
+            const container = document.getElementById('product-inputs');
+            
+            let html = '';
+            
+            switch(action) {
+                case 'getProduct':
+                    html = '<div class="form-group"><label>Product ID:</label><input type="text" id="product-id" placeholder="Enter product ID"></div>';
+                    break;
+                case 'createProduct':
+                    html = `
+                        <div class="grid-2">
+                            <div class="form-group"><label>Name:</label><input type="text" id="product-name" placeholder="Product name"></div>
+                            <div class="form-group"><label>Price:</label><input type="number" id="product-price" step="0.01" placeholder="0.00"></div>
+                        </div>
+                        <div class="form-group"><label>Description:</label><textarea id="product-description" placeholder="Product description"></textarea></div>
+                        <div class="grid-2">
+                            <div class="form-group"><label>Stock:</label><input type="number" id="product-stock" placeholder="0"></div>
+                            <div class="form-group"><label>Category ID:</label><input type="text" id="product-category-id" placeholder="Category UUID"></div>
+                        </div>
+                    `;
+                    break;
+                case 'updateProduct':
+                    html = `
+                        <div class="form-group"><label>Product ID:</label><input type="text" id="update-product-id" placeholder="Product ID to update"></div>
+                        <div class="grid-2">
+                            <div class="form-group"><label>Name:</label><input type="text" id="update-product-name" placeholder="New name (optional)"></div>
+                            <div class="form-group"><label>Price:</label><input type="number" id="update-product-price" step="0.01" placeholder="New price (optional)"></div>
+                        </div>
+                        <div class="form-group"><label>Description:</label><textarea id="update-product-description" placeholder="New description (optional)"></textarea></div>
+                        <div class="form-group"><label>Stock:</label><input type="number" id="update-product-stock" placeholder="New stock (optional)"></div>
+                    `;
+                    break;
+                case 'updateStock':
+                    html = `
+                        <div class="grid-2">
+                            <div class="form-group"><label>Product ID:</label><input type="text" id="stock-product-id" placeholder="Product ID"></div>
+                            <div class="form-group"><label>Quantity:</label><input type="number" id="stock-quantity" placeholder="Quantity to add"></div>
+                        </div>
+                    `;
+                    break;
+            }
+            
+            container.innerHTML = html;
+        }
+
+        function updateDeliveryInputs() {
+            const action = document.getElementById('delivery-action').value;
+            const container = document.getElementById('delivery-inputs');
+            
+            let html = '';
+            
+            switch(action) {
+                case 'getDeliveryByOrderId':
+                    html = '<div class="form-group"><label>Order ID:</label><input type="text" id="delivery-order-id" placeholder="Enter order ID"></div>';
+                    break;
+                case 'getDeliveryByTracking':
+                    html = '<div class="form-group"><label>Tracking Number:</label><input type="text" id="delivery-tracking" placeholder="Enter tracking number"></div>';
+                    break;
+                case 'createDelivery':
+                    html = `
+                        <div class="form-group"><label>Order ID:</label><input type="text" id="new-delivery-order-id" placeholder="Order UUID"></div>
+                        <div class="form-group"><label>Delivery Address:</label><textarea id="new-delivery-address" placeholder="Full delivery address"></textarea></div>
+                        <div class="grid-2">
+                            <div class="form-group"><label>Customer Name:</label><input type="text" id="new-delivery-customer-name" placeholder="Customer name"></div>
+                            <div class="form-group"><label>Customer Phone:</label><input type="text" id="new-delivery-customer-phone" placeholder="+62812345678"></div>
+                        </div>
+                    `;
+                    break;
+                case 'updateStatus':
+                    html = `
+                        <div class="form-group"><label>Delivery ID:</label><input type="text" id="update-delivery-id" placeholder="Delivery ID"></div>                        <div class="form-group">
+                            <label>Status:</label>
+                            <select id="update-delivery-status">
+                                <option value="pending">Pending</option>
+                                <option value="confirmed">Confirmed</option>
+                                <option value="packed">Packed</option>
+                                <option value="shipped">Shipped</option>
+                                <option value="in_transit">In Transit</option>
+                                <option value="out_for_delivery">Out for Delivery</option>
+                                <option value="delivered">Delivered</option>
+                                <option value="failed">Failed</option>
+                                <option value="returned">Returned</option>
+                            </select>
+                        </div>
+                        <div class="form-group"><label>Notes:</label><textarea id="update-delivery-notes" placeholder="Optional notes"></textarea></div>
+                    `;
+                    break;
+            }
+            
+            container.innerHTML = html;
+        }
+
+        // Event listeners for dynamic updates
+        document.getElementById('product-action').addEventListener('change', updateProductInputs);
+        document.getElementById('delivery-action').addEventListener('change', updateDeliveryInputs);
+
+        // GraphQL execution functions
+        async function executeGraphQL(url, query, variables = {}) {
+            try {
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        query,
+                        variables
+                    })
+                });
+
+                const result = await response.json();
+                return result;
+            } catch (error) {
+                return { errors: [{ message: error.message }] };
+            }
+        }
+
+        // Product Service Actions
+        async function executeProductAction() {
+            const action = document.getElementById('product-action').value;
+            let query = '';
+            let variables = {};
+
+            switch(action) {
+                case 'getProducts':
+                    query = `
+                        query GetProducts {
+                            products {
+                                products {
+                                    id
+                                    name
+                                    description
+                                    price
+                                    stock
+                                    categoryId
+                                    isAvailable
+                                    createdAt
+                                }
+                                pagination {
+                                    currentPage
+                                    totalPages
+                                    totalItems
+                                }
+                            }
+                        }
+                    `;
+                    break;
+
+                case 'getProduct':
+                    const productId = document.getElementById('product-id').value;
+                    if (!productId) {
+                        alert('Please enter a product ID');
+                        return;
+                    }
+                    query = `
+                        query GetProduct($id: ID!) {
+                            product(id: $id) {
+                                id
+                                name
+                                description
+                                price
+                                stock
+                                categoryId
+                                isAvailable
+                                createdAt
+                                updatedAt
+                            }
+                        }
+                    `;
+                    variables = { id: productId };
+                    break;
+
+                case 'createProduct':
+                    const name = document.getElementById('product-name').value;
+                    const description = document.getElementById('product-description').value;
+                    const price = parseFloat(document.getElementById('product-price').value);
+                    const stock = parseInt(document.getElementById('product-stock').value);
+                    const categoryId = document.getElementById('product-category-id').value;
+
+                    if (!name || !description || !price || !stock || !categoryId) {
+                        alert('Please fill all required fields');
+                        return;
+                    }
+
+                    query = `
+                        mutation CreateProduct($input: CreateProductInput!) {
+                            createProduct(input: $input) {
+                                id
+                                name
+                                description
+                                price
+                                stock
+                                categoryId
+                                createdAt
+                            }
+                        }
+                    `;
+                    variables = {
+                        input: { name, description, price, stock, categoryId }
+                    };
+                    break;
+
+                case 'updateStock':
+                    const stockProductId = document.getElementById('stock-product-id').value;
+                    const quantity = parseInt(document.getElementById('stock-quantity').value);
+
+                    if (!stockProductId || !quantity) {
+                        alert('Please fill all fields');
+                        return;
+                    }
+
+                    query = `
+                        mutation UpdateStock($id: ID!, $quantity: Int!) {
+                            updateProductStock(id: $id, quantity: $quantity) {
+                                id
+                                name
+                                stock
+                                updatedAt
+                            }
+                        }
+                    `;
+                    variables = { id: stockProductId, quantity };
+                    break;
+            }
+
+            const result = await executeGraphQL(PRODUCT_SERVICE_URL, query, variables);
+            displayResult('product-result', 'product-output', result);
+        }
+
+        // Delivery Service Actions
+        async function executeDeliveryAction() {
+            const action = document.getElementById('delivery-action').value;
+            let query = '';
+            let variables = {};
+
+            switch(action) {
+                case 'getDeliveries':
+                    query = `
+                        query GetDeliveries {
+                            deliveries {
+                                deliveries {
+                                    id
+                                    orderId
+                                    status
+                                    deliveryAddress
+                                    customerName
+                                    customerPhone
+                                    trackingNumber
+                                    isCompleted
+                                    isInProgress
+                                    createdAt
+                                }
+                                pagination {
+                                    currentPage
+                                    totalPages
+                                    totalItems
+                                }
+                            }
+                        }
+                    `;
+                    break;
+
+                case 'getDeliveryByOrderId':
+                    const orderId = document.getElementById('delivery-order-id').value;
+                    if (!orderId) {
+                        alert('Please enter an order ID');
+                        return;
+                    }
+                    query = `
+                        query GetDeliveryByOrderId($orderId: ID!) {
+                            deliveryByOrderId(orderId: $orderId) {
+                                id
+                                orderId
+                                status
+                                deliveryAddress
+                                customerName
+                                trackingNumber
+                                estimatedDelivery
+                                actualDelivery
+                                isCompleted
+                                isInProgress
+                                createdAt
+                            }
+                        }
+                    `;
+                    variables = { orderId };
+                    break;
+
+                case 'getDeliveryByTracking':
+                    const trackingNumber = document.getElementById('delivery-tracking').value;
+                    if (!trackingNumber) {
+                        alert('Please enter a tracking number');
+                        return;
+                    }
+                    query = `
+                        query GetDeliveryByTracking($trackingNumber: String!) {
+                            deliveryByTrackingNumber(trackingNumber: $trackingNumber) {
+                                id
+                                orderId
+                                status
+                                deliveryAddress
+                                customerName
+                                trackingNumber
+                                estimatedDelivery
+                                actualDelivery
+                                createdAt
+                            }
+                        }
+                    `;
+                    variables = { trackingNumber };
+                    break;
+
+                case 'createDelivery':
+                    const newOrderId = document.getElementById('new-delivery-order-id').value;
+                    const deliveryAddress = document.getElementById('new-delivery-address').value;
+                    const customerName = document.getElementById('new-delivery-customer-name').value;
+                    const customerPhone = document.getElementById('new-delivery-customer-phone').value;
+
+                    if (!newOrderId || !deliveryAddress) {
+                        alert('Please fill required fields (Order ID and Address)');
+                        return;
+                    }
+
+                    query = `
+                        mutation CreateDelivery($input: CreateDeliveryInput!) {
+                            createDelivery(input: $input) {
+                                id
+                                orderId
+                                status
+                                deliveryAddress
+                                customerName
+                                customerPhone
+                                createdAt
+                            }
+                        }
+                    `;
+                    variables = {
+                        input: {
+                            orderId: newOrderId,
+                            deliveryAddress,
+                            customerName: customerName || null,
+                            customerPhone: customerPhone || null
+                        }
+                    };
+                    break;
+
+                case 'updateStatus':
+                    const deliveryId = document.getElementById('update-delivery-id').value;
+                    const status = document.getElementById('update-delivery-status').value;
+                    const notes = document.getElementById('update-delivery-notes').value;
+
+                    if (!deliveryId || !status) {
+                        alert('Please fill required fields');
+                        return;
+                    }
+
+                    query = `
+                        mutation UpdateDeliveryStatus($input: UpdateDeliveryStatusInput!) {
+                            updateDeliveryStatus(input: $input) {
+                                id
+                                orderId
+                                status
+                                trackingNumber
+                                notes
+                                updatedAt
+                            }
+                        }
+                    `;
+                    variables = {
+                        input: {
+                            id: deliveryId,
+                            status,
+                            notes: notes || null
+                        }
+                    };
+                    break;
+
+                case 'getStats':
+                    query = `
+                        query GetDeliveryStats {
+                            deliveryStats {
+                                totalDeliveries
+                                pendingDeliveries
+                                inProgressDeliveries
+                                completedDeliveries
+                                failedDeliveries
+                            }
+                        }
+                    `;
+                    break;
+            }
+
+            const result = await executeGraphQL(DELIVERY_SERVICE_URL, query, variables);
+            displayResult('delivery-result', 'delivery-output', result);
+        }
+
+        // Integration testing
+        async function testFullWorkflow() {
+            displayResult('integration-result', 'integration-output', { message: 'Starting integration test...' });
+
+            // Step 1: Create a product
+            const createProductQuery = `
+                mutation CreateProduct($input: CreateProductInput!) {
+                    createProduct(input: $input) {
+                        id
+                        name
+                        price
+                        stock
+                    }
+                }
+            `;
+
+            const productResult = await executeGraphQL(PRODUCT_SERVICE_URL, createProductQuery, {
+                input: {
+                    name: 'Test Integration Product',
+                    description: 'Product for integration testing',
+                    price: 1000000,
+                    stock: 10,
+                    categoryId: 'test-category-id'
+                }
+            });
+
+            // Step 2: Create a delivery
+            if (productResult.data && productResult.data.createProduct) {
+                const orderId = 'test-order-' + Date.now();
+                
+                const createDeliveryQuery = `
+                    mutation CreateDelivery($input: CreateDeliveryInput!) {
+                        createDelivery(input: $input) {
+                            id
+                            orderId
+                            status
+                            deliveryAddress
+                        }
+                    }
+                `;
+
+                const deliveryResult = await executeGraphQL(DELIVERY_SERVICE_URL, createDeliveryQuery, {
+                    input: {
+                        orderId,
+                        deliveryAddress: 'Test Address, Jakarta, Indonesia',
+                        customerName: 'Integration Test Customer',
+                        orderItems: [{
+                            productId: productResult.data.createProduct.id,
+                            productName: productResult.data.createProduct.name,
+                            quantity: 1,
+                            price: productResult.data.createProduct.price
+                        }]
+                    }
+                });
+
+                const integrationResult = {
+                    success: true,
+                    steps: {
+                        step1_createProduct: productResult,
+                        step2_createDelivery: deliveryResult
+                    }
+                };
+
+                displayResult('integration-result', 'integration-output', integrationResult);
+            } else {
+                displayResult('integration-result', 'integration-output', {
+                    error: 'Integration test failed at product creation',
+                    details: productResult
+                });
+            }
+        }
+
+        async function testCategoryIntegration() {
+            displayResult('integration-result', 'integration-output', { 
+                message: 'Testing Category Service integration...',
+                note: 'This will fail if Category Service is not running on port 4002'
+            });
+
+            const testQuery = `
+                query TestCategoryIntegration {
+                    products {
+                        products {
+                            id
+                            name
+                            category {
+                                id
+                                name
+                            }
+                        }
+                    }
+                }
+            `;
+
+            const result = await executeGraphQL(PRODUCT_SERVICE_URL, testQuery);
+            displayResult('integration-result', 'integration-output', result);
+        }
+
+        // Utility functions
+        function displayResult(containerId, outputId, result) {
+            const container = document.getElementById(containerId);
+            const output = document.getElementById(outputId);
+            
+            output.textContent = JSON.stringify(result, null, 2);
+            container.style.display = 'block';
+        }
+
+        function clearResult(containerId) {
+            const container = document.getElementById(containerId);
+            container.style.display = 'none';
+        }
+    </script>
+</body>
+</html>
