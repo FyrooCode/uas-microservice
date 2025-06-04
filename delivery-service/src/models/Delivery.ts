@@ -21,7 +21,7 @@ interface DeliveryAttributes {
   deliveryAddress: string;
   customerName?: string;
   customerPhone?: string;
-  trackingNumber?: string;
+  trackingNumber: string;
   estimatedDelivery?: Date;
   actualDelivery?: Date;
   notes?: string;
@@ -30,7 +30,7 @@ interface DeliveryAttributes {
   updatedAt?: Date;
 }
 
-interface DeliveryCreationAttributes extends Optional<DeliveryAttributes, 'id' | 'createdAt' | 'updatedAt'> {}
+interface DeliveryCreationAttributes extends Optional<DeliveryAttributes, 'id' | 'trackingNumber' | 'createdAt' | 'updatedAt'> {}
 
 class Delivery extends Model<DeliveryAttributes, DeliveryCreationAttributes> implements DeliveryAttributes {
   public id!: string;
@@ -39,23 +39,31 @@ class Delivery extends Model<DeliveryAttributes, DeliveryCreationAttributes> imp
   public deliveryAddress!: string;
   public customerName?: string;
   public customerPhone?: string;
-  public trackingNumber?: string;
+  public trackingNumber!: string;
   public estimatedDelivery?: Date;
-  public actualDelivery?: Date;
-  public notes?: string;
+  public actualDelivery?: Date;  public notes?: string;
   public orderItems?: string;
   public readonly createdAt!: Date;
   public readonly updatedAt!: Date;
-
-  // Method to generate tracking number
-  public generateTrackingNumber(): string {
+  // Method to generate tracking number with standard format: DEL-YYYYMMDD-XXXX
+  public static generateTrackingNumber(): string {
     const prefix = 'DEL';
-    const timestamp = Date.now().toString().slice(-8);
-    const random = Math.random().toString(36).substring(2, 6).toUpperCase();
-    this.trackingNumber = `${prefix}${timestamp}${random}`;
-    return this.trackingNumber;
+    const date = new Date();
+    const dateStr = date.getFullYear().toString() + 
+                   (date.getMonth() + 1).toString().padStart(2, '0') + 
+                   date.getDate().toString().padStart(2, '0');
+    
+    // Generate 4-digit random sequence
+    const random = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
+    
+    return `${prefix}-${dateStr}-${random}`;
   }
 
+  // Method to generate tracking number for this instance
+  public generateTrackingNumber(): string {
+    this.trackingNumber = Delivery.generateTrackingNumber();
+    return this.trackingNumber;
+  }
   // Method to update status with automatic tracking number generation
   public async updateStatusWithTracking(status: DeliveryStatus, notes?: string): Promise<void> {
     this.status = status;
@@ -63,7 +71,7 @@ class Delivery extends Model<DeliveryAttributes, DeliveryCreationAttributes> imp
       this.notes = notes;
     }
 
-    // Generate tracking number when status is confirmed or shipped
+    // Generate tracking number when status is confirmed or shipped (if not already generated)
     if ((status === DeliveryStatus.CONFIRMED || status === DeliveryStatus.SHIPPED) && !this.trackingNumber) {
       this.generateTrackingNumber();
     }
@@ -93,9 +101,8 @@ class Delivery extends Model<DeliveryAttributes, DeliveryCreationAttributes> imp
       DeliveryStatus.OUT_FOR_DELIVERY
     ].includes(this.status);
   }
-
-  // Get parsed order items
-  public getParsedOrderItems(): any[] {
+  // Get parsed stored order items (minimal data from database)
+  public getStoredOrderItems(): Array<{productId: string, quantity: number}> {
     if (!this.orderItems) return [];
     try {
       return JSON.parse(this.orderItems);
@@ -104,9 +111,24 @@ class Delivery extends Model<DeliveryAttributes, DeliveryCreationAttributes> imp
     }
   }
 
-  // Set order items
-  public setOrderItems(items: any[]): void {
+  // Get parsed order items (for backward compatibility)
+  public getParsedOrderItems(): any[] {
+    return this.getStoredOrderItems();
+  }
+
+  // Set stored order items (minimal data)
+  public setStoredOrderItems(items: Array<{productId: string, quantity: number}>): void {
     this.orderItems = JSON.stringify(items);
+  }
+
+  // Set order items (for backward compatibility)
+  public setOrderItems(items: any[]): void {
+    // Convert to stored format if items have extra fields
+    const storedItems = items.map(item => ({
+      productId: item.productId,
+      quantity: item.quantity
+    }));
+    this.setStoredOrderItems(storedItems);
   }
 }
 
@@ -154,11 +176,15 @@ Delivery.init(
           msg: 'Invalid phone number format'
         }
       }
-    },
-    trackingNumber: {
+    },    trackingNumber: {
       type: DataTypes.STRING(50),
-      allowNull: true,
+      allowNull: false,
       unique: true,
+      validate: {
+        notEmpty: {
+          msg: 'Tracking number cannot be empty'
+        }
+      }
     },
     estimatedDelivery: {
       type: DataTypes.DATE,
@@ -167,16 +193,14 @@ Delivery.init(
     actualDelivery: {
       type: DataTypes.DATE,
       allowNull: true,
-    },
-    notes: {
+    },    notes: {
       type: DataTypes.TEXT,
       allowNull: true,
     },
     orderItems: {
       type: DataTypes.JSON,
       allowNull: true,
-    }
-  },
+    }},
   {
     sequelize,
     tableName: 'deliveries',
@@ -194,7 +218,36 @@ Delivery.init(
       {
         fields: ['createdAt']
       }
-    ]
+    ],
+    hooks: {
+      beforeValidate: async (delivery: Delivery) => {
+        // Auto-generate tracking number if not provided
+        if (!delivery.trackingNumber) {
+          let attempts = 0;
+          const maxAttempts = 10;
+          
+          while (attempts < maxAttempts) {
+            const trackingNumber = Delivery.generateTrackingNumber();
+            
+            // Check if tracking number already exists
+            const existingDelivery = await Delivery.findOne({
+              where: { trackingNumber }
+            });
+            
+            if (!existingDelivery) {
+              delivery.trackingNumber = trackingNumber;
+              break;
+            }
+            
+            attempts++;
+          }
+          
+          if (attempts >= maxAttempts) {
+            throw new Error('Unable to generate unique tracking number after multiple attempts');
+          }
+        }
+      }
+    }
   }
 );
 

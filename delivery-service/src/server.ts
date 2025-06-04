@@ -55,9 +55,7 @@ async function startServer() {
     });
   });
 
-  const PORT = process.env.PORT || 4003;
-
-  try {
+  const PORT = process.env.PORT || 4003;  try {
     // Initialize database
     console.log('🔄 Initializing delivery database...');
     await syncDatabase(process.env.NODE_ENV === 'development');

@@ -10,11 +10,30 @@ enum DeliveryStatus {
   returned
 }
 
+# Stored order item - minimal data stored in database
+type StoredOrderItem {
+  productId: ID!
+  quantity: Int!
+}
+
+# Enriched order item - with product data fetched from Product Service
 type OrderItem {
   productId: ID!
   productName: String!
   quantity: Int!
   price: Float!
+  totalPrice: Float!
+}
+
+# Enhanced order item with additional calculated fields
+type EnrichedOrderItem {
+  productId: ID!
+  productName: String!
+  quantity: Int!
+  price: Float!
+  totalPrice: Float!
+  category: String
+  isAvailable: Boolean!
 }
 
 type Delivery {
@@ -26,20 +45,23 @@ type Delivery {
   customerPhone: String
   trackingNumber: String
   estimatedDelivery: String
-  actualDelivery: String
-  notes: String
+  actualDelivery: String  notes: String
   orderItems: [OrderItem!]
+  enrichedOrderItems: [EnrichedOrderItem!]
+  storedOrderItems: [StoredOrderItem!]
+  totalOrderValue: Float
+  totalAmount: Float
+  itemCount: Int!
   isCompleted: Boolean!
   isInProgress: Boolean!
   createdAt: String!
   updatedAt: String!
 }
 
+# Input for creating delivery - only productId and quantity needed
 input OrderItemInput {
   productId: ID!
-  productName: String!
   quantity: Int!
-  price: Float!
 }
 
 input CreateDeliveryInput {

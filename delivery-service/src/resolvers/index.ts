@@ -1,6 +1,8 @@
-import { Op } from 'sequelize';
+import { Op, Transaction } from 'sequelize';
 import Delivery, { DeliveryStatus } from '../models/Delivery';
+import { sequelize } from '../models';
 import productService from '../services/productService';
+import { OrderItem, EnrichedOrderItem, StoredOrderItem } from '../types';
 
 // Helper function to calculate pagination
 const calculatePagination = (page: number, limit: number, totalItems: number) => {
@@ -148,8 +150,9 @@ export const resolvers = {
       return Object.values(DeliveryStatus);
     }
   },
-  Mutation: {
-    createDelivery: async (_: any, { input }: any) => {
+  Mutation: {    createDelivery: async (_: any, { input }: any) => {
+      let transaction: Transaction | null = null;
+      
       try {
         console.log(`🚀 Creating delivery for order ${input.orderId}...`);
 
@@ -167,27 +170,39 @@ export const resolvers = {
           };
         }
 
+        // Start database transaction for atomic operation
+        transaction = await sequelize.transaction();
+        console.log(`🔄 Started database transaction for atomic delivery creation`);
+
         // Validate and reduce stock for all products in the order
+        // Convert input items to stock reduction format (they're already in minimal format)
         const stockReductionItems = input.orderItems.map((item: any) => ({
           productId: item.productId,
           quantity: item.quantity
         }));
 
-        console.log(`📦 Processing ${stockReductionItems.length} items for stock reduction...`);
-
-        const stockResult = await productService.validateAndReduceMultipleProducts(stockReductionItems);
+        console.log(`📦 Processing ${stockReductionItems.length} items for stock reduction...`);        // Use atomic stock validation and reduction
+        const stockResult = await productService.validateAndReduceMultipleProductsAtomic(stockReductionItems);
 
         if (!stockResult.success) {
           console.log(`❌ Stock validation failed for ${stockResult.failedItems.length} items`);
           
-          // Build detailed stock errors for failed items
+          // Rollback database transaction
+          if (transaction) {
+            await transaction.rollback();
+            console.log(`🔄 Database transaction rolled back due to stock validation failure`);
+          }
+          
+          // Build detailed stock errors for failed items - need to fetch product info for error details
           const stockErrors = [];
           for (const result of stockResult.results) {
             if (!result.success) {
               const orderItem = input.orderItems.find((item: any) => item.productId === result.productId);
+              // Try to get product name from Product Service for better error message
+              const product = await productService.getProduct(result.productId);
               stockErrors.push({
                 productId: result.productId,
-                productName: orderItem?.productName || 'Unknown Product',
+                productName: product?.name || 'Unknown Product',
                 requestedQuantity: orderItem?.quantity || 0,
                 availableStock: result.remainingStock,
                 message: result.error || 'Stock validation failed'
@@ -205,17 +220,27 @@ export const resolvers = {
 
         console.log(`✅ Stock reduction successful for all items`);
 
-        // All stock reductions successful, create the delivery
-        const deliveryData = {
-          ...input,
-          orderItems: input.orderItems ? JSON.stringify(input.orderItems) : null,
-          estimatedDelivery: input.estimatedDelivery ? new Date(input.estimatedDelivery) : null,
+        // All stock reductions successful, create the delivery within the transaction
+        // Store only minimal order item data (productId + quantity)
+        const storedOrderItems = input.orderItems.map((item: any) => ({
+          productId: item.productId,
+          quantity: item.quantity
+        }));        const deliveryData = {
+          orderId: input.orderId,
+          deliveryAddress: input.deliveryAddress,
+          customerName: input.customerName,
+          customerPhone: input.customerPhone,
+          orderItems: JSON.stringify(storedOrderItems),
+          estimatedDelivery: input.estimatedDelivery ? new Date(input.estimatedDelivery) : undefined,
           status: DeliveryStatus.PENDING
         };
 
-        const delivery = await Delivery.create(deliveryData);
+        // Create delivery within the transaction
+        const delivery = await Delivery.create(deliveryData, { transaction });
         
-        console.log(`🎉 Delivery created successfully with ID: ${delivery.id}`);
+        // Commit the transaction - this ensures atomicity between stock reduction and delivery creation
+        await transaction.commit();
+        console.log(`✅ Transaction committed - delivery created successfully with ID: ${delivery.id}`);
 
         return {
           delivery,
@@ -226,6 +251,17 @@ export const resolvers = {
 
       } catch (error) {
         console.error('❌ Error creating delivery:', error);
+        
+        // Rollback transaction if it exists
+        if (transaction) {
+          try {
+            await transaction.rollback();
+            console.log(`🔄 Database transaction rolled back due to error`);
+          } catch (rollbackError) {
+            console.error('❌ Error rolling back transaction:', rollbackError);
+          }
+        }
+        
         return {
           delivery: null,
           stockErrors: [],
@@ -332,10 +368,36 @@ export const resolvers = {
     availableStock: (parent: any) => parent.availableStock,
     message: (parent: any) => parent.message
   },
-
   Delivery: {
-    orderItems: (parent: any) => {
-      return parent.getParsedOrderItems();
+    // Legacy orderItems field - returns enriched order items for backward compatibility
+    orderItems: async (parent: any) => {
+      const storedItems = parent.getStoredOrderItems();
+      return await productService.enrichOrderItems(storedItems);
+    },
+
+    // New enriched order items with additional product data
+    enrichedOrderItems: async (parent: any) => {
+      const storedItems = parent.getStoredOrderItems();
+      return await productService.getEnrichedOrderItems(storedItems);
+    },
+
+    // Stored order items (minimal data from database)
+    storedOrderItems: (parent: any) => {
+      return parent.getStoredOrderItems();
+    },    // Total order value calculated from current product prices
+    totalOrderValue: async (parent: any) => {
+      const storedItems = parent.getStoredOrderItems();
+      return await productService.calculateOrderTotal(storedItems);
+    },
+
+    // Total amount (alias for totalOrderValue for consistency)
+    totalAmount: async (parent: any) => {
+      const storedItems = parent.getStoredOrderItems();
+      return await productService.calculateOrderTotal(storedItems);
+    },    // Total number of items in the delivery
+    itemCount: (parent: any) => {
+      const storedItems = parent.getStoredOrderItems();
+      return storedItems.reduce((total: number, item: StoredOrderItem) => total + item.quantity, 0);
     },
 
     isCompleted: (parent: any) => {
@@ -348,9 +410,7 @@ export const resolvers = {
 
     estimatedDelivery: (parent: any) => {
       return parent.estimatedDelivery ? parent.estimatedDelivery.toISOString() : null;
-    },
-
-    actualDelivery: (parent: any) => {
+    },    actualDelivery: (parent: any) => {
       return parent.actualDelivery ? parent.actualDelivery.toISOString() : null;
     },
 
