@@ -21,6 +21,67 @@ Sistem ini terdiri dari 2 microservices utama:
 ## 🚀 Quick Start
 
 ### Prerequisites
+- Docker & Docker Compose
+- Git
+
+### 1. Clone Repository
+```bash
+git clone <your-repo-url>
+cd uas-iae
+```
+
+### 2. Environment Setup
+```bash
+# Copy environment template files
+cp .env.example .env
+cp product-service/.env.example product-service/.env
+cp delivery-service/.env.example delivery-service/.env
+
+# Edit the .env files and update the following:
+# - Change all DB_PASSWORD values
+# - Update external service URLs if needed
+# - Modify JWT_SECRET for security
+```
+
+### 3. Start All Services
+```bash
+# Build and start all containers
+docker-compose up --build -d
+
+# Check if all containers are running
+docker-compose ps
+```
+
+### 4. Verify Setup
+```bash
+# Test GraphQL endpoints
+curl http://localhost:4001/graphql
+curl http://localhost:4003/graphql
+
+# Or open in browser:
+# - Product Service GraphQL Playground: http://localhost:4001/graphql
+# - Delivery Service GraphQL Playground: http://localhost:4003/graphql
+```
+
+### 5. Access Admin Panel
+Open `admin-panel-enhanced.html` in your browser to manage products and deliveries.
+
+## 🛑 Troubleshooting
+
+### Common Issues:
+```bash
+# If containers fail to start, check logs:
+docker-compose logs product-service
+docker-compose logs delivery-service
+
+# Reset everything:
+docker-compose down -v
+docker-compose up --build -d
+```
+
+## 🚀 Original Quick Start
+
+### Prerequisites
 - Node.js 18+
 - Docker & Docker Compose
 - Git

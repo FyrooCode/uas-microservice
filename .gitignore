@@ -99,3 +99,81 @@ seeders/
 # Temporary files
 tmp/
 temp/
+
+# === MICROSERVICES SPECIFIC ===
+
+# Service-specific environment files (keep .env.example)
+product-service/.env*
+delivery-service/.env*
+*/.env*
+!*/.env.example
+!.env.example
+
+# Docker data & volumes
+docker-data/
+mysql-data/
+postgres-data/
+volumes/
+.docker/
+docker-compose.override.yml
+
+# Service build outputs
+product-service/dist/
+delivery-service/dist/
+*/dist/
+*/build/
+
+# Service-specific node_modules
+product-service/node_modules/
+delivery-service/node_modules/
+*/node_modules/
+
+# Service logs
+product-service/logs/
+delivery-service/logs/
+*/logs/
+service-*.log
+
+# Database files & backups
+*.sql.gz
+*.dump
+*.backup
+database-backup/
+db-backup/
+database/data/
+
+# GraphQL generated/cached files
+.graphql-cache/
+schema.json
+introspection.json
+generated/
+*/schema.json
+*/introspection.json
+
+# Testing artifacts
+*/coverage/
+*/.nyc_output/
+*/test-results/
+test-results/
+jest-results/
+*.test.log
+
+# Production secrets
+secrets/
+certs/
+ssl/
+keys/
+
+# Monitoring & Health checks
+monitoring/
+health-check.log
+
+# Development files
+*.development
+*.local
+.history/
+
+# IDE workspace files
+*.code-workspace
+.vscode/settings.json
+.idea/workspace.xml
