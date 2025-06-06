@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UAS IAE Microservices Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            flex: 1;
+        }
+
+        header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 40px;
+            margin-bottom: 40px;
+            text-align: center;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            color: #2c3e50;
+            font-size: 3rem;
+            margin-bottom: 15px;
+            font-weight: 700;
+        }
+
+        .subtitle {
+            color: #7f8c8d;
+            font-size: 1.3rem;
+            margin-bottom: 20px;
+        }
+
+        .description {
+            color: #5a6c7d;
+            font-size: 1rem;
+            line-height: 1.6;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .services-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+
+        .service-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+        }
+
+        .service-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+            border-color: #667eea;
+        }
+
+        .service-icon {
+            font-size: 4rem;
+            margin-bottom: 20px;
+            display: block;
+        }
+
+        .service-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #2c3e50;
+            margin-bottom: 15px;
+        }
+
+        .service-description {
+            color: #7f8c8d;
+            margin-bottom: 25px;
+            line-height: 1.6;
+        }
+
+        .service-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .btn {
+            padding: 12px 25px;
+            border: none;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-secondary {
+            background: #ecf0f1;
+            color: #2c3e50;
+            border: 2px solid #e1e8ed;
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%);
+            color: white;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+        }
+
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%);
+        }
+
+        .btn-success:hover {
+            background: linear-gradient(135deg, #27ae60 0%, #229954 100%);
+        }
+
+        .status-section {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        }
+
+        .status-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #2c3e50;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .status-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+        }
+
+        .status-item {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 15px;
+            text-align: center;
+            border-left: 4px solid #667eea;
+        }
+
+        .status-label {
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+
+        .status-value {
+            font-size: 1.1rem;
+            color: #7f8c8d;
+        }
+
+        .status-online {
+            border-left-color: #2ecc71;
+        }
+
+        .status-offline {
+            border-left-color: #e74c3c;
+        }
+
+        .quick-actions {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        }
+
+        .quick-actions-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #2c3e50;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .quick-actions-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+
+        footer {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 20px;
+            text-align: center;
+            color: #7f8c8d;
+            margin-top: 40px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        }
+
+        .tech-stack {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-top: 15px;
+            flex-wrap: wrap;
+        }
+
+        .tech-item {
+            background: #e3f2fd;
+            color: #1976d2;
+            padding: 5px 12px;
+            border-radius: 15px;
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+            }
+
+            h1 {
+                font-size: 2.5rem;
+            }
+
+            .services-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .quick-actions-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .tech-stack {
+                flex-direction: column;
+                align-items: center;
+                gap: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🏗️ UAS IAE Microservices</h1>
+            <p class="subtitle">Enterprise Application Integration Dashboard</p>
+            <p class="description">
+                A comprehensive microservices architecture project showcasing GraphQL APIs, 
+                Docker containerization, and inter-service communication for computer component 
+                product management and delivery tracking systems.
+            </p>
+        </header>
+
+        <div class="status-section">
+            <h2 class="status-title">📊 Service Status</h2>
+            <div class="status-grid">
+                <div class="status-item" id="product-service-status">
+                    <div class="status-label">Product Service</div>
+                    <div class="status-value">Checking...</div>
+                </div>
+                <div class="status-item" id="delivery-service-status">
+                    <div class="status-label">Delivery Service</div>
+                    <div class="status-value">Checking...</div>
+                </div>
+                <div class="status-item" id="mysql-product-status">
+                    <div class="status-label">MySQL Product DB</div>
+                    <div class="status-value">Docker</div>
+                </div>
+                <div class="status-item" id="mysql-delivery-status">
+                    <div class="status-label">MySQL Delivery DB</div>
+                    <div class="status-value">Docker</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="services-grid">
+            <div class="service-card">
+                <span class="service-icon">🛍️</span>
+                <h3 class="service-title">Customer Store</h3>
+                <p class="service-description">
+                    Browse and shop for computer components with advanced filtering, 
+                    real-time stock tracking, and shopping cart functionality.
+                </p>
+                <div class="service-actions">
+                    <a href="store-complete.html" class="btn btn-primary">
+                        🔍 Browse Products
+                    </a>
+                    <a href="store-complete.html" class="btn btn-secondary">
+                        🛒 Shop Now
+                    </a>
+                </div>
+            </div>
+
+            <div class="service-card">
+                <span class="service-icon">📦</span>
+                <h3 class="service-title">Delivery Tracking</h3>
+                <p class="service-description">
+                    Track your order deliveries in real-time with detailed status updates, 
+                    timeline visualization, and comprehensive order information.
+                </p>
+                <div class="service-actions">
+                    <a href="delivery-tracking.html" class="btn btn-primary">
+                        🔍 Track Delivery
+                    </a>
+                    <a href="delivery-tracking.html" class="btn btn-secondary">
+                        📋 Recent Deliveries
+                    </a>
+                </div>
+            </div>
+
+            <div class="service-card">
+                <span class="service-icon">📋</span>
+                <h3 class="service-title">Order Management</h3>
+                <p class="service-description">
+                    Create test orders with our dummy order service to simulate 
+                    the complete order-to-delivery workflow for testing purposes.
+                </p>
+                <div class="service-actions">
+                    <a href="dummy-order-service.html" class="btn btn-success">
+                        ➕ Create Order
+                    </a>
+                    <a href="dummy-order-service.html" class="btn btn-secondary">
+                        🧪 Test Workflow
+                    </a>
+                </div>
+            </div>
+
+            <div class="service-card">
+                <span class="service-icon">⚙️</span>
+                <h3 class="service-title">Admin Panel</h3>
+                <p class="service-description">
+                    Advanced administration tools for managing products, deliveries, 
+                    and testing GraphQL APIs with comprehensive debugging capabilities.
+                </p>
+                <div class="service-actions">
+                    <a href="admin-panel-enhanced.html" class="btn btn-primary">
+                        🎛️ Enhanced Panel
+                    </a>
+                    <a href="admin-panel.html" class="btn btn-secondary">
+                        🔧 Classic Panel
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="quick-actions">
+            <h2 class="quick-actions-title">⚡ Quick Actions</h2>
+            <div class="quick-actions-grid">
+                <button class="btn btn-primary" onclick="checkAllServices()">
+                    🔄 Refresh Status
+                </button>
+                <button class="btn btn-secondary" onclick="openDocumentation()">
+                    📚 Documentation
+                </button>
+                <button class="btn btn-secondary" onclick="openPostman()">
+                    📮 Postman Collection
+                </button>
+                <button class="btn btn-success" onclick="runHealthCheck()">
+                    🏥 Health Check
+                </button>
+                <button class="btn btn-secondary" onclick="viewLogs()">
+                    📝 View Logs
+                </button>
+                <button class="btn btn-secondary" onclick="openGraphiQL()">
+                    🔍 GraphiQL
+                </button>
+            </div>
+        </div>
+
+        <footer>
+            <p>&copy; 2024 UAS IAE Microservices Project</p>
+            <p>Enterprise Application Integration • Computer Components Management</p>
+            <div class="tech-stack">
+                <span class="tech-item">Node.js</span>
+                <span class="tech-item">TypeScript</span>
+                <span class="tech-item">GraphQL</span>
+                <span class="tech-item">Apollo Server</span>
+                <span class="tech-item">Express.js</span>
+                <span class="tech-item">MySQL</span>
+                <span class="tech-item">Sequelize</span>
+                <span class="tech-item">Docker</span>
+            </div>
+        </footer>
+    </div>
+
+    <script>
+        const PRODUCT_SERVICE_URL = 'http://localhost:4001/graphql';
+        const DELIVERY_SERVICE_URL = 'http://localhost:4003/graphql';
+
+        // Check service status on page load
+        window.onload = function() {
+            checkAllServices();
+        };
+
+        // Check all services status
+        async function checkAllServices() {
+            updateStatus('product-service-status', 'Checking...', 'checking');
+            updateStatus('delivery-service-status', 'Checking...', 'checking');
+
+            // Check Product Service
+            try {
+                const productHealth = await checkServiceHealth(PRODUCT_SERVICE_URL, 'Product Service');
+                updateStatus('product-service-status', productHealth.status, productHealth.online ? 'online' : 'offline');
+            } catch (error) {
+                updateStatus('product-service-status', 'Offline', 'offline');
+            }
+
+            // Check Delivery Service
+            try {
+                const deliveryHealth = await checkServiceHealth(DELIVERY_SERVICE_URL, 'Delivery Service');
+                updateStatus('delivery-service-status', deliveryHealth.status, deliveryHealth.online ? 'online' : 'offline');
+            } catch (error) {
+                updateStatus('delivery-service-status', 'Offline', 'offline');
+            }
+        }
+
+        // Check individual service health
+        async function checkServiceHealth(url, serviceName) {
+            try {
+                const healthQuery = `
+                    query {
+                        __schema {
+                            types {
+                                name
+                            }
+                        }
+                    }
+                `;
+
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ query: healthQuery })
+                });
+
+                if (response.ok) {
+                    const result = await response.json();
+                    if (result.data) {
+                        return { status: 'Online', online: true };
+                    } else {
+                        return { status: 'Error', online: false };
+                    }
+                } else {
+                    return { status: `HTTP ${response.status}`, online: false };
+                }
+            } catch (error) {
+                return { status: 'Offline', online: false };
+            }
+        }
+
+        // Update status display
+        function updateStatus(elementId, status, type) {
+            const element = document.getElementById(elementId);
+            const valueElement = element.querySelector('.status-value');
+            valueElement.textContent = status;
+
+            // Remove existing status classes
+            element.classList.remove('status-online', 'status-offline', 'status-checking');
+            
+            // Add appropriate status class
+            if (type === 'online') {
+                element.classList.add('status-online');
+            } else if (type === 'offline') {
+                element.classList.add('status-offline');
+            }
+        }
+
+        // Quick action functions
+        function openDocumentation() {
+            // Open README.md or documentation
+            window.open('README.md', '_blank');
+        }
+
+        function openPostman() {
+            alert('Import the Postman collection files:\n' +
+                  '• UAS_IAE_Complete_GraphQL_Collection.postman_collection.json\n' +
+                  '• UAS_IAE_Local_Environment.postman_environment.json');
+        }
+
+        async function runHealthCheck() {
+            alert('Running comprehensive health check...');
+            await checkAllServices();
+            
+            // Additional checks can be added here
+            setTimeout(() => {
+                alert('Health check completed! Check the service status indicators.');
+            }, 2000);
+        }
+
+        function viewLogs() {
+            alert('To view logs, use:\n' +
+                  'docker-compose logs product-service\n' +
+                  'docker-compose logs delivery-service\n\n' +
+                  'Or check the terminal where you ran docker-compose up');
+        }
+
+        function openGraphiQL() {
+            const choice = confirm('Which GraphQL playground would you like to open?\n\n' +
+                                 'OK = Product Service (localhost:4001/graphql)\n' +
+                                 'Cancel = Delivery Service (localhost:4003/graphql)');
+            
+            if (choice) {
+                window.open('http://localhost:4001/graphql', '_blank');
+            } else {
+                window.open('http://localhost:4003/graphql', '_blank');
+            }
+        }
+
+        // Add some interactive effects
+        document.addEventListener('DOMContentLoaded', function() {
+            // Add click effects to service cards
+            const serviceCards = document.querySelectorAll('.service-card');
+            serviceCards.forEach(card => {
+                card.addEventListener('click', function(e) {
+                    // Only trigger if clicking on the card itself, not buttons
+                    if (e.target === card || e.target.classList.contains('service-icon') || 
+                        e.target.classList.contains('service-title') || 
+                        e.target.classList.contains('service-description')) {
+                        const primaryLink = card.querySelector('.btn-primary');
+                        if (primaryLink) {
+                            primaryLink.click();
+                        }
+                    }
+                });
+            });
+
+            // Auto-refresh status every 30 seconds
+            setInterval(checkAllServices, 30000);
+        });
+    </script>
+</body>
+</html>
