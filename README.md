@@ -10,13 +10,31 @@ Sistem ini terdiri dari 2 microservices utama:
 - **Fungsi**: Mengelola data produk komponen komputer (CPU, GPU, RAM, Storage)
 - **Database**: MySQL (`mysql-product` pada port 3306)
 - **GraphQL API**: `http://localhost:4001/graphql`
-- **Dependencies**: Mengkonsumsi Category Service (external group)
+- **Store Analytics**: Menyediakan comprehensive store analytics dan insights untuk Store Team
 
 ### 2. Delivery Service (Port 4003)
 - **Fungsi**: Mengelola tracking dan status pengiriman pesanan
 - **Database**: MySQL (`mysql-delivery` pada port 3307)
 - **GraphQL API**: `http://localhost:4003/graphql`
 - **Integration**: Menerima data dari Order Service (external group)
+
+## 🏪 Store Team Features
+
+Product Service menyediakan complete product catalog functionality untuk Store Team dalam menampilkan produk ke customer:
+
+### 🛍️ Customer-Facing Store Display
+- **Product Catalog**: Browse semua produk dengan filtering dan pagination
+- **Category Browsing**: Filter produk berdasarkan kategori (CPU, GPU, RAM, Storage)
+- **Product Search**: Search produk berdasarkan nama dan deskripsi
+- **Product Details**: Detail lengkap produk dengan availability status
+- **Stock Information**: Real-time stock availability untuk customer
+
+### 🎯 Key Store Queries
+- `products`: Get all products dengan filtering dan pagination
+- `productsByCategory`: Browse produk berdasarkan kategori
+- `searchProducts`: Search functionality untuk customer
+- `product`: Detail produk individual
+- Available categories untuk navigation menu
 
 ## 🚀 Quick Start
 
@@ -303,13 +321,6 @@ mutation UpdateDeliveryStatus($input: UpdateDeliveryStatusInput!) {
 
 ## 🌐 Inter-Service Communication
 
-### Product Service → Category Service
-```typescript
-// Product Service mengkonsumsi Category Service
-const categoryClient = new CategoryServiceClient();
-const category = await categoryClient.getCategoryById(categoryId);
-```
-
 ### Order Service → Delivery Service
 ```graphql
 # Order Service memanggil Delivery Service
@@ -410,27 +421,88 @@ query GetDeliveryStatus($orderId: ID!) {
 }
 ```
 
-### Untuk Category Service Team
+### Untuk Store Team
 
-**Expected Category Service Endpoint**: `http://localhost:4002/graphql`
+**Product Service Endpoint**: `http://localhost:4001/graphql`
 
-**Category Query yang dibutuhkan**:
+**Customer Store Display Queries**:
 ```graphql
-query GetCategory($id: ID!) {
-  category(id: $id) {
-    id
-    name
-    description
-    createdAt
-    updatedAt
+# Get all products for store catalog
+query GetProducts($filter: ProductFilterInput, $pagination: PaginationInput) {
+  products(filter: $filter, pagination: $pagination) {
+    products {
+      id
+      name
+      description
+      price
+      stock
+      category {
+        id
+        name
+      }
+      isAvailable
+    }
+    pagination {
+      currentPage
+      totalPages
+      totalItems
+    }
   }
 }
 
-query GetCategories {
-  categories {
+# Get products by category for navigation
+query GetProductsByCategory($categoryId: ID!, $pagination: PaginationInput) {
+  productsByCategory(categoryId: $categoryId, pagination: $pagination) {
+    products {
+      id
+      name
+      description
+      price
+      stock
+      isAvailable
+    }
+    pagination {
+      currentPage
+      totalPages
+      totalItems
+    }
+  }
+}
+
+# Search products for customer search functionality
+query SearchProducts($query: String!, $pagination: PaginationInput) {
+  searchProducts(query: $query, pagination: $pagination) {
+    products {
+      id
+      name
+      description
+      price
+      stock
+      isAvailable
+    }
+    pagination {
+      currentPage
+      totalPages
+      totalItems
+    }
+  }
+}
+
+# Get single product for product detail page
+query GetProduct($id: ID!) {
+  product(id: $id) {
     id
     name
     description
+    price
+    stock
+    categoryId
+    category {
+      id
+      name
+      description
+    }
+    isAvailable
     createdAt
     updatedAt
   }
@@ -508,6 +580,196 @@ const updateDelivery = await fetch('http://localhost:4003/graphql', {
 });
 ```
 
+## 🏪 Store Team Usage Examples
+
+### Customer Product Catalog
+```javascript
+// Fetch all products for store homepage
+const allProducts = await fetch('http://localhost:4001/graphql', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    query: `
+      query GetProducts($pagination: PaginationInput) {
+        products(pagination: $pagination) {
+          products {
+            id
+            name
+            description
+            price
+            stock
+            category {
+              id
+              name
+            }
+            isAvailable
+          }
+          pagination {
+            currentPage
+            totalPages
+            totalItems
+          }
+        }
+      }
+    `,
+    variables: {
+      pagination: { page: 1, limit: 12 }
+    }
+  })
+});
+```
+
+### Category-Based Product Browsing
+```javascript
+// Filter products by category (e.g., CPU, GPU, RAM, Storage)
+const categoryProducts = await fetch('http://localhost:4001/graphql', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    query: `
+      query GetProductsByCategory($categoryId: ID!, $pagination: PaginationInput) {
+        productsByCategory(categoryId: $categoryId, pagination: $pagination) {
+          products {
+            id
+            name
+            description
+            price
+            stock
+            isAvailable
+          }
+          pagination {
+            currentPage
+            totalPages
+            totalItems
+          }
+        }
+      }
+    `,
+    variables: {
+      categoryId: "cpu-category-id",
+      pagination: { page: 1, limit: 8 }
+    }
+  })
+});
+```
+
+### Customer Product Search
+```javascript
+// Search products for customer search bar
+const searchResults = await fetch('http://localhost:4001/graphql', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    query: `
+      query SearchProducts($query: String!, $pagination: PaginationInput) {
+        searchProducts(query: $query, pagination: $pagination) {
+          products {
+            id
+            name
+            description
+            price
+            stock
+            isAvailable
+          }
+          pagination {
+            totalItems
+          }
+        }
+      }
+    `,
+    variables: {
+      query: "Intel Core i7",
+      pagination: { page: 1, limit: 10 }
+    }
+  })
+});
+```
+
+### Product Detail Page
+```javascript
+// Get detailed product information for product page
+const productDetail = await fetch('http://localhost:4001/graphql', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    query: `
+      query GetProduct($id: ID!) {
+        product(id: $id) {
+          id
+          name
+          description
+          price
+          stock
+          categoryId
+          category {
+            id
+            name
+            description
+          }
+          isAvailable
+          createdAt
+        }
+      }
+    `,
+    variables: { id: "product-uuid" }
+  })
+});
+```
+            price
+          }
+        }
+      }
+    `
+  })
+});
+```
+
+### Real-time Inventory Monitoring
+```javascript
+// Check for low stock alerts
+const lowStockAlerts = await fetch('http://localhost:4001/graphql', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    query: `
+      query GetLowStockAlerts($threshold: Int!) {
+        lowStockAlerts(threshold: $threshold) {
+          id
+          name
+          stock
+          price
+          categoryId
+        }
+      }
+    `,
+    variables: { threshold: 5 }
+  })
+});
+```
+
+### Product Analytics for Business Intelligence
+```javascript
+// Get product analytics with categorization
+const productAnalytics = await fetch('http://localhost:4001/graphql', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    query: `
+      query GetProductAnalytics {
+        productAnalytics {
+          productId
+          name
+          stockLevel
+          priceCategory
+          availability
+          value
+        }
+      }
+    `
+  })
+});
+```
+
 ## 🔧 Troubleshooting
 
 ### Common Issues
@@ -534,9 +796,27 @@ const updateDelivery = await fetch('http://localhost:4003/graphql', {
    docker-compose restart product-service
    ```
 
-4. **Category Service Connection Error**
-   - Pastikan Category Service berjalan di port 4002
-   - Check `CATEGORY_SERVICE_URL` di Product Service environment
+4. **Service Performance Issues**
+   ```bash
+   # Check resource usage
+   docker stats
+   
+   # View detailed service logs
+   docker-compose logs -f product-service
+   docker-compose logs -f delivery-service
+   ```
+
+5. **Database Issues**
+   ```bash
+   # Check database connectivity
+   docker exec -it mysql-product mysql -u root -p
+   docker exec -it mysql-delivery mysql -u root -p
+   
+   # Reset databases (WARNING: This will delete all data)
+   docker-compose down -v
+   docker volume prune -f
+   docker-compose up --build -d
+   ```
 
 ### Health Checks
 ```bash
@@ -548,6 +828,27 @@ curl http://localhost:4003/health
 curl -X POST http://localhost:4001/graphql \
   -H "Content-Type: application/json" \
   -d '{"query": "{ __schema { types { name } } }"}'
+
+# Test Store Team specific queries
+curl -X POST http://localhost:4001/graphql \
+  -H "Content-Type: application/json" \
+  -d '{"query": "{ storeStats { totalProducts totalValue averagePrice } }"}'
+```
+
+## 🎯 Quick Reference
+
+### Store Team Endpoints
+- **All Products**: `query { products { ... } }`
+- **Products by Category**: `query { productsByCategory(categoryId: "...") { ... } }`
+- **Search Products**: `query { searchProducts(query: "...") { ... } }`
+- **Product Detail**: `query { product(id: "...") { ... } }`
+- **Available Categories**: Use category field in product responses
+
+### Service Endpoints
+- **Product Service**: http://localhost:4001/graphql
+- **Delivery Service**: http://localhost:4003/graphql
+- **Admin Panel**: `admin-panel-enhanced.html`
+- **Store Frontend**: `store-complete.html`
 ```
 
 ## 📝 Project Structure
@@ -566,7 +867,8 @@ uas-iae/
 │   │   ├── resolvers/
 │   │   │   └── index.ts
 │   │   ├── services/
-│   │   │   └── categoryService.ts
+│   │   │   ├── categoryService.ts
+│   │   │   └── storeService.ts
 │   │   └── server.ts
 │   ├── Dockerfile
 │   ├── package.json

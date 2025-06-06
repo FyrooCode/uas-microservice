@@ -19,6 +19,61 @@ type Category {
   updatedAt: String!
 }
 
+# Store Analytics Types
+type StoreStats {
+  totalProducts: Int!
+  totalValue: Float!
+  lowStockProducts: Int!
+  outOfStockProducts: Int!
+  averagePrice: Float!
+  categoriesUsed: [String!]!
+}
+
+type CategoryStats {
+  categoryId: ID!
+  productCount: Int!
+  totalValue: Float!
+  averagePrice: Float!
+  totalStock: Int!
+}
+
+type StoreOverview {
+  stats: StoreStats!
+  categoryBreakdown: [CategoryStats!]!
+  recentProducts: [Product!]!
+  lowStockAlerts: [Product!]!
+}
+
+type ProductAnalytics {
+  productId: ID!
+  name: String!
+  categoryId: ID!
+  stockLevel: StockLevel!
+  priceCategory: PriceCategory!
+  availability: Boolean!
+  value: Float!
+}
+
+type InventorySummary {
+  totalProducts: Int!
+  totalStockValue: Float!
+  totalItems: Int!
+  averageStockPerProduct: Float!
+}
+
+enum StockLevel {
+  HIGH
+  MEDIUM
+  LOW
+  OUT_OF_STOCK
+}
+
+enum PriceCategory {
+  BUDGET
+  MID_RANGE
+  PREMIUM
+}
+
 input CreateProductInput {
   name: String!
   description: String!
@@ -83,6 +138,38 @@ type Query {
     query: String!
     pagination: PaginationInput
   ): ProductConnection!
+
+  # Store Team Queries - Comprehensive data about products and store
+  
+  # Get complete store overview with all statistics
+  storeOverview: StoreOverview!
+  
+  # Get detailed store statistics
+  storeStats: StoreStats!
+  
+  # Get category breakdown with statistics
+  categoryBreakdown: [CategoryStats!]!
+  
+  # Get product analytics with categorization
+  productAnalytics: [ProductAnalytics!]!
+  
+  # Get inventory summary
+  inventorySummary: InventorySummary!
+  
+  # Get low stock alerts
+  lowStockAlerts(threshold: Int = 10): [Product!]!
+  
+  # Get out of stock products
+  outOfStockProducts: [Product!]!
+  
+  # Get recent products
+  recentProducts(limit: Int = 10): [Product!]!
+  
+  # Enhanced product search with store context
+  storeSearchProducts(query: String!): [Product!]!
+  
+  # Get all products in a category with store insights
+  storeProductsByCategory(categoryId: ID!): [Product!]!
 }
 
 type Mutation {

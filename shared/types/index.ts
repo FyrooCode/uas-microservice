@@ -116,3 +116,45 @@ export interface PaginatedResponse<T> {
   items: T[];
   pagination: PaginationInfo;
 }
+
+// Store Team Types - Comprehensive analytics and insights
+export interface StoreStats {
+  totalProducts: number;
+  totalValue: number;
+  lowStockProducts: number;
+  outOfStockProducts: number;
+  averagePrice: number;
+  categoriesUsed: string[];
+}
+
+export interface CategoryStats {
+  categoryId: string;
+  productCount: number;
+  totalValue: number;
+  averagePrice: number;
+  totalStock: number;
+}
+
+export interface StoreOverview {
+  stats: StoreStats;
+  categoryBreakdown: CategoryStats[];
+  recentProducts: Product[];
+  lowStockAlerts: Product[];
+}
+
+export interface ProductAnalytics {
+  productId: string;
+  name: string;
+  categoryId: string;
+  stockLevel: 'high' | 'medium' | 'low' | 'out_of_stock';
+  priceCategory: 'budget' | 'mid_range' | 'premium';
+  availability: boolean;
+  value: number;
+}
+
+export interface InventorySummary {
+  totalProducts: number;
+  totalStockValue: number;
+  totalItems: number;
+  averageStockPerProduct: number;
+}

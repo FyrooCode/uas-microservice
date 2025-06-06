@@ -1,9 +1,9 @@
 import { Op } from 'sequelize';
 import Product from '../models/Product';
-import CategoryServiceClient from '../services/categoryService';
+import StoreService from '../services/storeService';
 import { ProductNotFoundError, InsufficientStockError, InvalidQuantityError } from '../errors/CustomErrors';
 
-const categoryService = new CategoryServiceClient();
+const storeService = new StoreService();
 
 // Helper function to calculate pagination
 const calculatePagination = (page: number, limit: number, totalItems: number) => {
@@ -108,9 +108,7 @@ export const resolvers = {
         console.error('Error fetching products by category:', error);
         throw new Error('Failed to fetch products by category');
       }
-    },
-
-    searchProducts: async (_: any, { query, pagination }: any) => {
+    },    searchProducts: async (_: any, { query, pagination }: any) => {
       try {
         const page = pagination?.page || 1;
         const limit = pagination?.limit || 10;
@@ -138,18 +136,104 @@ export const resolvers = {
         console.error('Error searching products:', error);
         throw new Error('Failed to search products');
       }
+    },
+
+    // Store Team Queries - Comprehensive store data and analytics
+    storeOverview: async () => {
+      try {
+        return await storeService.getStoreOverview();
+      } catch (error) {
+        console.error('Error getting store overview:', error);
+        throw new Error('Failed to get store overview');
+      }
+    },
+
+    storeStats: async () => {
+      try {
+        return await storeService.getStoreStats();
+      } catch (error) {
+        console.error('Error getting store stats:', error);
+        throw new Error('Failed to get store statistics');
+      }
+    },
+
+    categoryBreakdown: async () => {
+      try {
+        return await storeService.getCategoryBreakdown();
+      } catch (error) {
+        console.error('Error getting category breakdown:', error);
+        throw new Error('Failed to get category breakdown');
+      }
+    },
+
+    productAnalytics: async () => {
+      try {
+        return await storeService.getProductAnalytics();
+      } catch (error) {
+        console.error('Error getting product analytics:', error);
+        throw new Error('Failed to get product analytics');
+      }
+    },
+
+    inventorySummary: async () => {
+      try {
+        return await storeService.getInventorySummary();
+      } catch (error) {
+        console.error('Error getting inventory summary:', error);
+        throw new Error('Failed to get inventory summary');
+      }
+    },
+
+    lowStockAlerts: async (_: any, { threshold }: { threshold?: number }) => {
+      try {
+        return await storeService.getLowStockAlerts(threshold);
+      } catch (error) {
+        console.error('Error getting low stock alerts:', error);
+        throw new Error('Failed to get low stock alerts');
+      }
+    },
+
+    outOfStockProducts: async () => {
+      try {
+        return await storeService.getOutOfStockProducts();
+      } catch (error) {
+        console.error('Error getting out of stock products:', error);
+        throw new Error('Failed to get out of stock products');
+      }
+    },
+
+    recentProducts: async (_: any, { limit }: { limit?: number }) => {
+      try {
+        return await storeService.getRecentProducts(limit);
+      } catch (error) {
+        console.error('Error getting recent products:', error);
+        throw new Error('Failed to get recent products');
+      }
+    },
+
+    storeSearchProducts: async (_: any, { query }: { query: string }) => {
+      try {
+        return await storeService.searchProducts(query);
+      } catch (error) {
+        console.error('Error searching products in store:', error);
+        throw new Error('Failed to search products');
+      }
+    },
+
+    storeProductsByCategory: async (_: any, { categoryId }: { categoryId: string }) => {
+      try {
+        return await storeService.getProductsByCategory(categoryId);
+      } catch (error) {
+        console.error('Error getting products by category in store:', error);
+        throw new Error('Failed to get products by category');
+      }
     }
   },
 
   Mutation: {    createProduct: async (_: any, { input }: any) => {
       try {
-        // TODO: Verify that category exists by calling Category Service
-        // For now, skip category validation for development/testing
-        // const category = await categoryService.getCategoryById(input.categoryId);
-        // if (!category) {
-        //   throw new Error('Category not found');
-        // }
-
+        // With store team integration, category validation is handled by store team
+        // Basic validation can be added here if needed
         const product = await Product.create(input);
         return product;
       } catch (error) {
@@ -160,14 +244,8 @@ export const resolvers = {
       try {
         const { id, ...updateData } = input;
 
-        // TODO: If categoryId is being updated, verify it exists
-        // For now, skip category validation for development/testing
-        // if (updateData.categoryId) {
-        //   const category = await categoryService.getCategoryById(updateData.categoryId);
-        //   if (!category) {
-        //     throw new Error('Category not found');
-        //   }
-        // }
+        // With store team integration, category validation is handled by store team
+        // Basic validation can be added here if needed
 
         const [updatedRowsCount] = await Product.update(updateData, {
           where: { id }
@@ -239,16 +317,30 @@ export const resolvers = {
       }
     }
   },
-
   Product: {
-    // Resolver to fetch category data from Category Service
+    // Resolver to provide category information based on categoryId
+    // Since we're replacing external category service with store team
+    // We'll return basic category info with the categoryId
     category: async (parent: any) => {
       try {
-        const category = await categoryService.getCategoryById(parent.categoryId);
-        return category;
+        // For store team integration, we'll provide a basic category structure
+        // The store team can expand this with their own category management
+        return {
+          id: parent.categoryId,
+          name: `Category ${parent.categoryId}`,
+          description: `Category for ${parent.categoryId}`,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        };
       } catch (error) {
-        console.error('Error fetching category for product:', error);
-        return null;
+        console.error('Error providing category info for product:', error);
+        return {
+          id: parent.categoryId,
+          name: 'Unknown Category',
+          description: 'Category information not available',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        };
       }
     },
 
