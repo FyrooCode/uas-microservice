@@ -18,6 +18,76 @@ Sistem ini terdiri dari 2 microservices utama:
 - **GraphQL API**: `http://localhost:4003/graphql`
 - **Integration**: Menerima data dari Order Service (external group)
 
+## 🛠️ Tech Stack
+
+### Backend Technologies
+- **Runtime**: Node.js 18+ dengan TypeScript untuk type safety
+- **Framework**: Express.js sebagai web server foundation
+- **API Layer**: GraphQL dengan Apollo Server untuk unified API interface
+- **Database**: MySQL dengan Sequelize ORM untuk data persistence
+- **Authentication**: JWT-based authentication untuk secure access
+- **Containerization**: Docker & Docker Compose untuk deployment
+
+### Development & DevOps
+- **Language**: TypeScript dengan strict typing untuk code quality
+- **Package Manager**: npm untuk dependency management
+- **Container Orchestration**: Docker Compose untuk multi-service deployment
+- **Database Migration**: Sequelize CLI untuk schema management
+- **Environment Configuration**: dotenv untuk configuration management
+
+### Database & Storage
+- **Primary Database**: MySQL 8.0 untuk relational data storage
+- **ORM**: Sequelize dengan TypeScript models dan UUID primary keys
+- **Connection Pooling**: Built-in Sequelize connection pooling
+- **Data Validation**: Sequelize validators dengan custom business rules
+- **Database Isolation**: Separate MySQL instances per service
+
+### API & Communication
+- **API Protocol**: GraphQL untuk type-safe inter-service communication
+- **Schema Definition**: GraphQL SDL (Schema Definition Language)
+- **Query Optimization**: DataLoader pattern untuk N+1 query prevention
+- **Error Handling**: Structured GraphQL error responses dengan custom error types
+- **API Documentation**: GraphQL Playground untuk interactive API exploration
+
+### Architecture Patterns
+- **Microservices**: Independent services dengan dedicated databases
+- **Domain-Driven Design**: Service boundaries berdasarkan business domains
+- **CQRS Pattern**: Separate read/write operations untuk performance optimization
+- **Repository Pattern**: Data access abstraction untuk maintainability
+- **Service Layer**: Business logic encapsulation
+
+### Docker Infrastructure
+```yaml
+Services:
+  - product-service: Node.js GraphQL API (Port 4001)
+  - delivery-service: Node.js GraphQL API (Port 4003)
+  - mysql-product: MySQL 8.0 (Port 3306)
+  - mysql-delivery: MySQL 8.0 (Port 3307)
+
+Networks:
+  - microservices-network: Internal Docker network untuk service communication
+
+Volumes:
+  - mysql-product-data: Persistent storage untuk product database
+  - mysql-delivery-data: Persistent storage untuk delivery database
+```
+
+### Development Tools & Standards
+- **Code Quality**: ESLint dengan TypeScript rules
+- **Code Formatting**: Prettier untuk consistent code style
+- **Type Checking**: TypeScript compiler dengan strict mode
+- **Hot Reload**: nodemon untuk development productivity
+- **Environment Management**: Multiple .env files untuk different environments
+- **Build Process**: TypeScript compilation dengan npm scripts
+
+### Security & Best Practices
+- **Input Validation**: GraphQL input types dengan Sequelize validators
+- **SQL Injection Prevention**: Sequelize parameterized queries
+- **CORS Configuration**: Proper cross-origin resource sharing setup
+- **Environment Variables**: Sensitive data stored in environment files
+- **Container Security**: Non-root user dalam Docker containers
+- **Database Security**: Separate credentials per service
+
 ## 🏪 Store Team Features
 
 Product Service menyediakan complete product catalog functionality untuk Store Team dalam menampilkan produk ke customer:
@@ -49,17 +119,103 @@ cd uas-iae
 ```
 
 ### 2. Environment Setup
+
+Create `.env` files from templates and configure them:
+
 ```bash
 # Copy environment template files
 cp .env.example .env
 cp product-service/.env.example product-service/.env
 cp delivery-service/.env.example delivery-service/.env
-
-# Edit the .env files and update the following:
-# - Change all DB_PASSWORD values
-# - Update external service URLs if needed
-# - Modify JWT_SECRET for security
 ```
+
+**Root `.env.example` template:**
+```env
+# Database Configuration
+DB_HOST=localhost
+DB_USER=root
+DB_PASSWORD=your_secure_password_here
+
+# Service URLs (for inter-service communication)
+PRODUCT_SERVICE_URL=http://product-service:4001/graphql
+DELIVERY_SERVICE_URL=http://delivery-service:4003/graphql
+
+# External Services (if needed)
+CATEGORY_SERVICE_URL=http://external-category-service:4000/graphql
+ORDER_SERVICE_URL=http://external-order-service:4002/graphql
+
+# Security
+JWT_SECRET=your_jwt_secret_key_here
+API_KEY=your_api_key_here
+
+# Environment
+NODE_ENV=development
+```
+
+**Product Service `.env.example`:**
+```env
+# Server Configuration
+PORT=4001
+NODE_ENV=development
+
+# Database Configuration
+DB_HOST=mysql-product
+DB_PORT=3306
+DB_NAME=product_db
+DB_USER=root
+DB_PASSWORD=your_secure_password_here
+
+# GraphQL Configuration
+GRAPHQL_INTROSPECTION=true
+GRAPHQL_PLAYGROUND=true
+
+# External Services
+CATEGORY_SERVICE_URL=http://external-category-service:4000/graphql
+
+# Security
+JWT_SECRET=your_jwt_secret_key_here
+
+# Store Configuration
+STORE_NAME=UAS Computer Store
+STORE_CURRENCY=IDR
+LOW_STOCK_THRESHOLD=5
+```
+
+**Delivery Service `.env.example`:**
+```env
+# Server Configuration
+PORT=4003
+NODE_ENV=development
+
+# Database Configuration
+DB_HOST=mysql-delivery
+DB_PORT=3306
+DB_NAME=delivery_db
+DB_USER=root
+DB_PASSWORD=your_secure_password_here
+
+# GraphQL Configuration
+GRAPHQL_INTROSPECTION=true
+GRAPHQL_PLAYGROUND=true
+
+# External Services
+PRODUCT_SERVICE_URL=http://product-service:4001/graphql
+ORDER_SERVICE_URL=http://external-order-service:4002/graphql
+
+# Security
+JWT_SECRET=your_jwt_secret_key_here
+
+# Delivery Configuration
+DEFAULT_DELIVERY_DAYS=3
+MAX_DELIVERY_DAYS=7
+TRACKING_PREFIX=DEL
+```
+
+**Important**: Edit the `.env` files and update:
+- Change all `DB_PASSWORD` values to secure passwords
+- Update `JWT_SECRET` with a strong secret key
+- Modify external service URLs if needed
+- Adjust configuration values as required
 
 ### 3. Start All Services
 ```bash
@@ -507,348 +663,6 @@ query GetProduct($id: ID!) {
     updatedAt
   }
 }
-```
-
-## 🛠️ Development Commands
-
-```bash
-# Build services
-npm run build
-
-# Run in development mode
-npm run dev
-
-# Run tests
-npm test
-
-# Database migration
-npm run migration
-
-# Database seeding
-npm run seed
-```
-
-## 📱 Frontend Integration
-
-Frontend/admin pages berjalan lokal dan mengkonsumsi GraphQL APIs yang di-expose oleh Docker containers melalui port mapping.
-
-### Example Frontend API Calls
-```javascript
-// Fetch products from Product Service
-const response = await fetch('http://localhost:4001/graphql', {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({
-    query: `
-      query GetProducts {
-        products {
-          products {
-            id
-            name
-            price
-            stock
-            isAvailable
-          }
-        }
-      }
-    `
-  })
-});
-
-// Update delivery status from Admin Panel
-const updateDelivery = await fetch('http://localhost:4003/graphql', {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({
-    query: `
-      mutation UpdateStatus($input: UpdateDeliveryStatusInput!) {
-        updateDeliveryStatus(input: $input) {
-          id
-          status
-          trackingNumber
-        }
-      }
-    `,
-    variables: {
-      input: {
-        id: "delivery-id",
-        status: "SHIPPED",
-        trackingNumber: "DEL123456789"
-      }
-    }
-  })
-});
-```
-
-## 🏪 Store Team Usage Examples
-
-### Customer Product Catalog
-```javascript
-// Fetch all products for store homepage
-const allProducts = await fetch('http://localhost:4001/graphql', {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({
-    query: `
-      query GetProducts($pagination: PaginationInput) {
-        products(pagination: $pagination) {
-          products {
-            id
-            name
-            description
-            price
-            stock
-            category {
-              id
-              name
-            }
-            isAvailable
-          }
-          pagination {
-            currentPage
-            totalPages
-            totalItems
-          }
-        }
-      }
-    `,
-    variables: {
-      pagination: { page: 1, limit: 12 }
-    }
-  })
-});
-```
-
-### Category-Based Product Browsing
-```javascript
-// Filter products by category (e.g., CPU, GPU, RAM, Storage)
-const categoryProducts = await fetch('http://localhost:4001/graphql', {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({
-    query: `
-      query GetProductsByCategory($categoryId: ID!, $pagination: PaginationInput) {
-        productsByCategory(categoryId: $categoryId, pagination: $pagination) {
-          products {
-            id
-            name
-            description
-            price
-            stock
-            isAvailable
-          }
-          pagination {
-            currentPage
-            totalPages
-            totalItems
-          }
-        }
-      }
-    `,
-    variables: {
-      categoryId: "cpu-category-id",
-      pagination: { page: 1, limit: 8 }
-    }
-  })
-});
-```
-
-### Customer Product Search
-```javascript
-// Search products for customer search bar
-const searchResults = await fetch('http://localhost:4001/graphql', {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({
-    query: `
-      query SearchProducts($query: String!, $pagination: PaginationInput) {
-        searchProducts(query: $query, pagination: $pagination) {
-          products {
-            id
-            name
-            description
-            price
-            stock
-            isAvailable
-          }
-          pagination {
-            totalItems
-          }
-        }
-      }
-    `,
-    variables: {
-      query: "Intel Core i7",
-      pagination: { page: 1, limit: 10 }
-    }
-  })
-});
-```
-
-### Product Detail Page
-```javascript
-// Get detailed product information for product page
-const productDetail = await fetch('http://localhost:4001/graphql', {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({
-    query: `
-      query GetProduct($id: ID!) {
-        product(id: $id) {
-          id
-          name
-          description
-          price
-          stock
-          categoryId
-          category {
-            id
-            name
-            description
-          }
-          isAvailable
-          createdAt
-        }
-      }
-    `,
-    variables: { id: "product-uuid" }
-  })
-});
-```
-            price
-          }
-        }
-      }
-    `
-  })
-});
-```
-
-### Real-time Inventory Monitoring
-```javascript
-// Check for low stock alerts
-const lowStockAlerts = await fetch('http://localhost:4001/graphql', {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({
-    query: `
-      query GetLowStockAlerts($threshold: Int!) {
-        lowStockAlerts(threshold: $threshold) {
-          id
-          name
-          stock
-          price
-          categoryId
-        }
-      }
-    `,
-    variables: { threshold: 5 }
-  })
-});
-```
-
-### Product Analytics for Business Intelligence
-```javascript
-// Get product analytics with categorization
-const productAnalytics = await fetch('http://localhost:4001/graphql', {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({
-    query: `
-      query GetProductAnalytics {
-        productAnalytics {
-          productId
-          name
-          stockLevel
-          priceCategory
-          availability
-          value
-        }
-      }
-    `
-  })
-});
-```
-
-## 🔧 Troubleshooting
-
-### Common Issues
-
-1. **Database Connection Failed**
-   ```bash
-   docker-compose down
-   docker-compose up -d mysql-product mysql-delivery
-   # Wait for healthy status
-   docker-compose up -d
-   ```
-
-2. **Port Already in Use**
-   ```bash
-   # Check what's using the port
-   netstat -ano | findstr :4001
-   
-   # Kill the process or change port in .env
-   ```
-
-3. **GraphQL Schema Errors**
-   ```bash
-   # Restart specific service
-   docker-compose restart product-service
-   ```
-
-4. **Service Performance Issues**
-   ```bash
-   # Check resource usage
-   docker stats
-   
-   # View detailed service logs
-   docker-compose logs -f product-service
-   docker-compose logs -f delivery-service
-   ```
-
-5. **Database Issues**
-   ```bash
-   # Check database connectivity
-   docker exec -it mysql-product mysql -u root -p
-   docker exec -it mysql-delivery mysql -u root -p
-   
-   # Reset databases (WARNING: This will delete all data)
-   docker-compose down -v
-   docker volume prune -f
-   docker-compose up --build -d
-   ```
-
-### Health Checks
-```bash
-# Check all services
-curl http://localhost:4001/health
-curl http://localhost:4003/health
-
-# Check GraphQL endpoints
-curl -X POST http://localhost:4001/graphql \
-  -H "Content-Type: application/json" \
-  -d '{"query": "{ __schema { types { name } } }"}'
-
-# Test Store Team specific queries
-curl -X POST http://localhost:4001/graphql \
-  -H "Content-Type: application/json" \
-  -d '{"query": "{ storeStats { totalProducts totalValue averagePrice } }"}'
-```
-
-## 🎯 Quick Reference
-
-### Store Team Endpoints
-- **All Products**: `query { products { ... } }`
-- **Products by Category**: `query { productsByCategory(categoryId: "...") { ... } }`
-- **Search Products**: `query { searchProducts(query: "...") { ... } }`
-- **Product Detail**: `query { product(id: "...") { ... } }`
-- **Available Categories**: Use category field in product responses
-
-### Service Endpoints
-- **Product Service**: http://localhost:4001/graphql
-- **Delivery Service**: http://localhost:4003/graphql
-- **Admin Panel**: `admin-panel-enhanced.html`
-- **Store Frontend**: `store-complete.html`
 ```
 
 ## 📝 Project Structure
