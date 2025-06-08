@@ -25,7 +25,6 @@ Sistem ini terdiri dari 2 microservices utama:
 - **Framework**: Express.js sebagai web server foundation
 - **API Layer**: GraphQL dengan Apollo Server untuk unified API interface
 - **Database**: MySQL dengan Sequelize ORM untuk data persistence
-- **Authentication**: JWT-based authentication untuk secure access
 - **Containerization**: Docker & Docker Compose untuk deployment
 
 ### Development & DevOps
@@ -144,9 +143,6 @@ DELIVERY_SERVICE_URL=http://delivery-service:4003/graphql
 CATEGORY_SERVICE_URL=http://external-category-service:4000/graphql
 ORDER_SERVICE_URL=http://external-order-service:4002/graphql
 
-# Security
-JWT_SECRET=your_jwt_secret_key_here
-API_KEY=your_api_key_here
 
 # Environment
 NODE_ENV=development
@@ -172,8 +168,6 @@ GRAPHQL_PLAYGROUND=true
 # External Services
 CATEGORY_SERVICE_URL=http://external-category-service:4000/graphql
 
-# Security
-JWT_SECRET=your_jwt_secret_key_here
 
 # Store Configuration
 STORE_NAME=UAS Computer Store
@@ -202,8 +196,7 @@ GRAPHQL_PLAYGROUND=true
 PRODUCT_SERVICE_URL=http://product-service:4001/graphql
 ORDER_SERVICE_URL=http://external-order-service:4002/graphql
 
-# Security
-JWT_SECRET=your_jwt_secret_key_here
+
 
 # Delivery Configuration
 DEFAULT_DELIVERY_DAYS=3
@@ -213,7 +206,6 @@ TRACKING_PREFIX=DEL
 
 **Important**: Edit the `.env` files and update:
 - Change all `DB_PASSWORD` values to secure passwords
-- Update `JWT_SECRET` with a strong secret key
 - Modify external service URLs if needed
 - Adjust configuration values as required
 
